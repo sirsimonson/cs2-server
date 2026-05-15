@@ -33,7 +33,7 @@ services:
       ALWAYS_UPDATE_ON_START: ${ALWAYS_UPDATE_ON_START:-false}
       INSTALL_MODDING: ${INSTALL_MODDING:-true}
       INSTALL_PLUGIN_PACK: ${INSTALL_PLUGIN_PACK:-true}
-      # Required for CounterStrikeSharp under ARM/FEX emulation.
+      # Required for CounterStrikeSharp under ARM/FEX emulation; overriding from 0 is not recommended unless you fully validate plugin/runtime compatibility.
       DOTNET_EnableWriteXorExecute: ${DOTNET_EnableWriteXorExecute:-0}
       CPU_CORE_COUNT: ${CPU_CORE_COUNT:?3}
       TZ: Europe/Berlin

@@ -20,7 +20,7 @@ pattern = re.compile(sys.argv[1], re.IGNORECASE)
 try:
     payload = json.load(sys.stdin)
 except json.JSONDecodeError:
-    sys.stderr.write("WARNING: Failed to parse GitHub releases payload for latest asset lookup. Fallback URL will be used if configured.\n")
+    sys.stderr.write("WARNING: Failed to parse GitHub releases payload for latest asset lookup. Returning empty result; fallback URL will be attempted if configured by caller.\n")
     print("")
     raise SystemExit(0)
 
@@ -235,6 +235,7 @@ def patch_node(node):
                 if kl in {"dbtype", "databasetype", "storage", "storagetype", "provider"} and vl in {"mysql", "postgres", "postgresql", "mariadb"}:
                     node[k] = "SQLite"
                     changed = True
+                # Handles common DSN styles used by rank plugins (e.g. MySQL/PostgreSQL host/server style connection strings).
                 elif "connectionstring" in kl and any(word in vl for word in ("server=", "host=", "port=", "uid=", "user id=", "password=", "database=")):
                     node[k] = "Data Source=/cs2-data/game/csgo/addons/counterstrikesharp/data/ranks.db"
                     changed = True

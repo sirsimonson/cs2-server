@@ -74,7 +74,7 @@ Once you finish step 5, congrats! The server is now ready to be used.
     ```bash
     +mat_queue_mode 2 -nojoy -nohltv +engine_no_focus_sleep 0 +fps_max 64 +sv_max_usercmd_future_ticks 4 +sv_hibernate_when_empty 0 +map de_dust2 +hostname "Müllers Mahlwerk | Wer zuerst schießt, mahlt zuerst"
     ```
-- Set your own RCON password explicitly via `EXTRA_PARAMS` (for example `+rcon_password "<your-password>"`) instead of relying on any default; the server can run without RCON if you omit this.
+- Set your own RCON password explicitly via `EXTRA_PARAMS` (for example `+rcon_password "your_secure_password_here"`) instead of relying on any default; the server can run without RCON if you omit this.
 - Optional plugin URL overrides are supported via env vars:
   - `ZENITH_URL_OVERRIDE`
   - `SIMPLERANKS_URL_OVERRIDE`
