@@ -72,8 +72,9 @@ Once you finish step 5, congrats! The server is now ready to be used.
   - `DOTNET_EnableWriteXorExecute=0`
   - `EXTRA_PARAMS` default:
     ```bash
-    +mat_queue_mode 2 -nojoy -nohltv +engine_no_focus_sleep 0 +fps_max 64 +sv_max_usercmd_future_ticks 4 +sv_hibernate_when_empty 0 +map de_dust2 +hostname "Müllers Mahlwerk | Wer zuerst schießt, mahlt zuerst" +rcon_password "naschkatzemagmatschigereiskuchen"
+    +mat_queue_mode 2 -nojoy -nohltv +engine_no_focus_sleep 0 +fps_max 64 +sv_max_usercmd_future_ticks 4 +sv_hibernate_when_empty 0 +map de_dust2 +hostname "Müllers Mahlwerk | Wer zuerst schießt, mahlt zuerst"
     ```
+- Setze ein eigenes RCON-Passwort immer explizit über `EXTRA_PARAMS` (z. B. `+rcon_password "<dein-passwort>"`), statt ein Default-Passwort zu verwenden.
 - Optional plugin URL overrides are supported via env vars:
   - `ZENITH_URL_OVERRIDE`
   - `SIMPLERANKS_URL_OVERRIDE`

@@ -28,7 +28,7 @@ services:
         
     environment:
       STEAM_GAMESERVER_API: ${STEAM_TOKEN:?}
-      EXTRA_PARAMS: '${EXTRA_PARAMS:-+mat_queue_mode 2 -nojoy -nohltv +engine_no_focus_sleep 0 +fps_max 64 +sv_max_usercmd_future_ticks 4 +sv_hibernate_when_empty 0 +map de_dust2 +hostname "Müllers Mahlwerk | Wer zuerst schießt, mahlt zuerst" +rcon_password "naschkatzemagmatschigereiskuchen"}'
+      EXTRA_PARAMS: '${EXTRA_PARAMS:-+mat_queue_mode 2 -nojoy -nohltv +engine_no_focus_sleep 0 +fps_max 64 +sv_max_usercmd_future_ticks 4 +sv_hibernate_when_empty 0 +map de_dust2 +hostname "Müllers Mahlwerk | Wer zuerst schießt, mahlt zuerst"}'
       ALWAYS_UPDATE_ON_START: ${ALWAYS_UPDATE_ON_START:-false}
       INSTALL_MODDING: ${INSTALL_MODDING:-true}
       INSTALL_PLUGIN_PACK: ${INSTALL_PLUGIN_PACK:-true}

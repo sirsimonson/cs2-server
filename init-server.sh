@@ -3,8 +3,15 @@
 function get_latest_release_asset_url() {
   local repo="$1"
   local asset_pattern="$2"
+  local response
 
-  curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" | python3 - "$asset_pattern" <<'PY'
+  if ! response="$(curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" 2>/dev/null)"; then
+    echo "WARNING: Could not fetch latest release metadata for ${repo} (network error or API rate limit)." >&2
+    echo ""
+    return 0
+  fi
+
+  printf '%s' "$response" | python3 - "$asset_pattern" <<'PY'
 import json
 import re
 import sys
@@ -13,6 +20,7 @@ pattern = re.compile(sys.argv[1], re.IGNORECASE)
 try:
     payload = json.load(sys.stdin)
 except Exception:
+    sys.stderr.write("WARNING: Failed to parse GitHub releases payload for latest asset lookup.\n")
     print("")
     raise SystemExit(0)
 
