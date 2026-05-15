@@ -34,6 +34,10 @@ COPY --from=builder /usr/bin/FEX* /usr/bin/
 RUN useradd -m steam
 
 USER root
+
+RUN mkdir -p /cs2-data /home/steam/.fex-emu && \
+    chown -R 1000:1000 /cs2-data /home/steam/.fex-emu
+
 COPY --chown=steam:steam --chmod=755 init-server.sh /home/steam/init-server.sh
 
 USER steam
