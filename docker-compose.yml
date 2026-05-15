@@ -11,14 +11,8 @@ services:
         limits:
           cpus: '3.5'
           memory: 20G
-    
-    # Port-Mapping laut Guide (Outside of Proxy control)
-    ports:
-      - "27015:27015/udp"
-      - "27015:27015/tcp"
-      - "27020:27020/udp"
-      - "26900:26900/udp"
-      - "27005:27005/udp"
+    # Nutzt Host-Netzwerk für niedrigere Latenz (ohne docker-proxy)
+    network_mode: host
 
     restart: unless-stopped
     ulimits:
