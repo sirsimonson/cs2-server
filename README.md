@@ -123,7 +123,7 @@ I have also tried to compress [zThundy/CS2-Server-on-ARM](https://github.com/zTh
 
 # CS2 Dedicated Server – Debugging & Setup Notes
 
-> Oracle Cloud (OCI) · Coolify · Host: `YOUR_SERVER_IP`
+> Oracle Cloud (OCI) · Coolify · Host: `<YOUR_SERVER_IP>`
 
 ---
 
@@ -136,7 +136,7 @@ Internet
 Oracle VCN Security List       ← Outer Door (Cloud-Level)
    │
    ▼
-Ubuntu Host (YOUR_SERVER_IP)
+Ubuntu Host (<YOUR_SERVER_IP>)
    │  iptables INPUT chain      ← Inner Door (OS-Level)
    │
    ▼
@@ -150,11 +150,11 @@ cs2-server Container (10.0.7.x:27015)
 
 ## Coolify App-Konfiguration
 
-- **UUID:** `YOUR_COOLIFY_APP_UUID`
+- **UUID:** `<YOUR_COOLIFY_APP_UUID>`
 - **Build Pack:** `dockercompose`
 - **Proxy/Traefik:** deaktiviert (keine Traefik-Labels)
 - **Network Mode:** Bridge (custom Coolify-Netzwerk)
-- **Server Name (A2S Query):** `YOUR_SERVER_NAME`
+- **Server Name (A2S Query):** `<YOUR_SERVER_NAME>`
 
 ### docker-compose Ports (korrekt konfiguriert ✓)
 ```yaml
@@ -221,6 +221,7 @@ CS2-Clients verbinden sich von einem zufälligen Ephemeral-Port → Oracle hat j
 python3 -c "
 import socket
 query = b'\xFF\xFF\xFF\xFF\x54Source Engine Query\x00'
+sock = None
 try:
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(5)
@@ -234,25 +235,30 @@ try:
 except (socket.timeout, OSError) as e:
     print('FAIL', str(e))
 finally:
-    try:
+    if sock is not None:
         sock.close()
-    except (OSError, AttributeError):
-        pass
 "
 ```
 
-**Erwartete Antwort:** Server-Name `YOUR_SERVER_NAME`, Map `de_dust2`, AppID `730`
+**Erwartete Antwort:** Server-Name `<YOUR_SERVER_NAME>`, Map `de_dust2`, AppID `730`
 
 ### Externer Test (vom lokalen Rechner):
 ```bash
 python3 -c "
 import socket
 query = b'\xFF\xFF\xFF\xFF\x54Source Engine Query\x00'
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.settimeout(5)
-sock.sendto(query, ('YOUR_SERVER_IP', 27015))
-data, _ = sock.recvfrom(4096)
-print('OK' if data[4:5] in (b'\x49', b'\x41') else 'FAIL', data[:32].hex())
+sock = None
+try:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(5)
+    sock.sendto(query, ('<YOUR_SERVER_IP>', 27015))
+    data, _ = sock.recvfrom(4096)
+    print('OK' if data[4:5] in (b'\x49', b'\x41') else 'FAIL', data[:32].hex())
+except (socket.timeout, OSError) as e:
+    print('FAIL', str(e))
+finally:
+    if sock is not None:
+        sock.close()
 "
 # Wenn Timeout → Oracle Security List blockiert noch
 # Wenn Antwort → Server vollständig erreichbar
