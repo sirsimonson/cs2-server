@@ -13,14 +13,12 @@ Major thanks to [sa-shiro/Satisfactory-Dedicated-Server-ARM64-Docker](https://gi
 2. **Setting up file system**:  
    **WIP, will do something about the security later**  
    - First, make the directories `cs2-data` and `fex-data`. You can accomplish this by doing `mkdir -p cs2-data fex-data`.
-   - Second, give the directories permission by 
-     - Using `chmod`:
-       ```
-       sudo chmod 777 cs2-data
-       sudo chmod 777 fex-data
-       sudo chmod 777 init-server.sh
-       sudo chmod +x init-server.sh
-       ```
+    - Second, give the directories permission by 
+      - Using `chmod`:
+        ```
+        sudo chmod 777 cs2-data
+        sudo chmod 777 fex-data
+        ```
      - Using `chown` (replace **USER_ID:GROUP_ID** with the desired user's IDs, for example, `1000:1000`):
        ```
        sudo chown -R USER_ID:GROUP_ID cs2-data
@@ -29,8 +27,9 @@ Major thanks to [sa-shiro/Satisfactory-Dedicated-Server-ARM64-Docker](https://gi
        (On Oracle Cloud Infrastructure (OCI), by default, the user with the ID `1000:1000` is `opc`. However, since this user is primarily intended for the setup process, it is advisable to utilize the `ubuntu` user with IDs `1001:1001`)
 
 3. **Build the Docker Image**:  
-   This section will take about ~15 minutes to compile from source. If it goes beyond that, check to make sure the compilation isn't stuck.  
-   Run the command **IF YOU ARE USING ORACLE CLOUD'S AMPERE**:
+    This section will take about ~15 minutes to compile from source. If it goes beyond that, check to make sure the compilation isn't stuck.  
+   The `init-server.sh` script is copied into the image at build time by the Dockerfile.
+    Run the command **IF YOU ARE USING ORACLE CLOUD'S AMPERE**:
    ```
    sudo docker build -t cs2-arm64 -f Dockerfile .
    ```
