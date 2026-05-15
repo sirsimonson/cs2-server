@@ -33,8 +33,7 @@ COPY --from=builder /usr/bin/FEX* /usr/bin/
 
 RUN useradd -m steam
 
-COPY --chown=steam:steam init-server.sh /home/steam/init-server.sh
-RUN chmod +x /home/steam/init-server.sh
+COPY --chown=steam:steam --chmod=755 init-server.sh /home/steam/init-server.sh
 
 USER steam
 
