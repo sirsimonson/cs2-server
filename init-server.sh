@@ -19,7 +19,7 @@ import sys
 pattern = re.compile(sys.argv[1], re.IGNORECASE)
 try:
     payload = json.load(sys.stdin)
-except Exception:
+except json.JSONDecodeError:
     sys.stderr.write("WARNING: Failed to parse GitHub releases payload for latest asset lookup. Fallback URL will be used if configured.\n")
     print("")
     raise SystemExit(0)
@@ -249,7 +249,7 @@ for path in targets:
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-    except Exception:
+    except (json.JSONDecodeError, OSError):
         continue
     original = json.dumps(data, ensure_ascii=False)
     if patch_node(data):
@@ -276,7 +276,7 @@ if os.path.exists(path):
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-    except Exception:
+    except (json.JSONDecodeError, OSError):
         data = {}
 
 if not isinstance(data, dict):
