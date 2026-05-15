@@ -64,8 +64,25 @@ Once you finish step 5, congrats! The server is now ready to be used.
 # Modifying Docker Compose Config
 - If you want to change the port to some other port, you can add -port \<port> to the EXTRA_PARAMS and change the Docker Compose ports as well.
 - All EXTRA_PARAMS can be found by googling what you need. I cannot help you and will not help you on finding all the extra parameters that can be added. The current EXTRA_PARAMS is good enough for the server to run.
-- Currently, installing MetaMod and CounterStrikeSharp is available. This will change in the future when I can dedicate some time to polishing this project.
-- If you are installing plugins onto the server, you MUST disable ALWAYS_UPDATE_ON_START and enable INSTALL_MODDING. You must also change DOTNET_EnableWriteXorExecute to 0.
+- MetaMod and CounterStrikeSharp installation now targets the latest release automatically (with hardcoded fallback URLs).
+- Default compose settings are now tuned for ARM/FEX and modded operation:
+  - `ALWAYS_UPDATE_ON_START=false`
+  - `INSTALL_MODDING=true`
+  - `INSTALL_PLUGIN_PACK=true`
+  - `DOTNET_EnableWriteXorExecute=0`
+  - `EXTRA_PARAMS` default:
+    ```bash
+    +mat_queue_mode 2 -nojoy -nohltv +engine_no_focus_sleep 0 +fps_max 64 +sv_max_usercmd_future_ticks 4 +sv_hibernate_when_empty 0 +map de_dust2 +hostname "Müllers Mahlwerk | Wer zuerst schießt, mahlt zuerst" +rcon_password "naschkatzemagmatschigereiskuchen"
+    ```
+- Optional plugin URL overrides are supported via env vars:
+  - `ZENITH_URL_OVERRIDE`
+  - `SIMPLERANKS_URL_OVERRIDE`
+  - `QUAKESOUNDS_URL_OVERRIDE`
+  - `DEATHMATCH_URL_OVERRIDE`
+- At startup, the container now enforces:
+  - `server.cfg`: `sv_parallel_sends 1`, `sv_threaded_init 1`, `sv_maxunlag 0.2`
+  - SQLite migration attempts for rank-related plugin JSON configs (when detected)
+  - `configs/plugins/CS2-Deathmatch/CS2-Deathmatch.json` headshot-only defaults (`Enabled=true`, commands include `!hs` and `!onlyhs`)
 - You can find your STEAM_GAMESERVER_API by visiting [Valve's GameServer page](https://steamcommunity.com/dev/managegameservers). Once you go in there, you can create a new game server account by putting 730 in the App ID textbox, and whatever you want for the memo. I recommend putting `cs2-arm server` in the memo.
 - I am still learning about docker compose, so this may be very insecure and I am sorry about that. 
 
