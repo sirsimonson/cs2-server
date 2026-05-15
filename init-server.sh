@@ -20,7 +20,7 @@ pattern = re.compile(sys.argv[1], re.IGNORECASE)
 try:
     payload = json.load(sys.stdin)
 except Exception:
-    sys.stderr.write("WARNING: Failed to parse GitHub releases payload for latest asset lookup.\n")
+    sys.stderr.write("WARNING: Failed to parse GitHub releases payload for latest asset lookup. Fallback URL will be used if configured.\n")
     print("")
     raise SystemExit(0)
 
@@ -251,7 +251,11 @@ for path in targets:
             data = json.load(f)
     except Exception:
         continue
+    original = json.dumps(data, ensure_ascii=False)
     if patch_node(data):
+        updated = json.dumps(data, ensure_ascii=False)
+        if original != updated:
+            sys.stderr.write(f"INFO: Updated database configuration to SQLite in {path}\n")
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
             f.write("\n")
