@@ -221,15 +221,23 @@ CS2-Clients verbinden sich von einem zufälligen Ephemeral-Port → Oracle hat j
 python3 -c "
 import socket
 query = b'\xFF\xFF\xFF\xFF\x54Source Engine Query\x00'
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.settimeout(5)
-sock.sendto(query, ('127.0.0.1', 27015))
-data, _ = sock.recvfrom(4096)
-if data[4:5] == b'\x41':
-    challenge = data[5:9]
-    sock.sendto(b'\xFF\xFF\xFF\xFF\x54Source Engine Query\x00' + challenge, ('127.0.0.1', 27015))
+try:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(5)
+    sock.sendto(query, ('127.0.0.1', 27015))
     data, _ = sock.recvfrom(4096)
-print('OK' if data[4:5] == b'\x49' else 'FAIL', data[:32].hex())
+    if data[4:5] == b'\x41':
+        challenge = data[5:9]
+        sock.sendto(b'\xFF\xFF\xFF\xFF\x54Source Engine Query\x00' + challenge, ('127.0.0.1', 27015))
+        data, _ = sock.recvfrom(4096)
+    print('OK' if data[4:5] == b'\x49' else 'FAIL', data[:32].hex())
+except (socket.timeout, OSError) as e:
+    print('FAIL', str(e))
+finally:
+    try:
+        sock.close()
+    except Exception:
+        pass
 "
 ```
 
@@ -237,6 +245,15 @@ print('OK' if data[4:5] == b'\x49' else 'FAIL', data[:32].hex())
 
 ### Externer Test (vom lokalen Rechner):
 ```bash
+python3 -c "
+import socket
+query = b'\xFF\xFF\xFF\xFF\x54Source Engine Query\x00'
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.settimeout(5)
+sock.sendto(query, ('141.147.52.165', 27015))
+data, _ = sock.recvfrom(4096)
+print('OK' if data[4:5] in (b'\x49', b'\x41') else 'FAIL', data[:32].hex())
+"
 # Wenn Timeout → Oracle Security List blockiert noch
 # Wenn Antwort → Server vollständig erreichbar
 ```
