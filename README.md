@@ -73,8 +73,8 @@ Once you finish step 5, congrats! The server is now ready to be used.
 # Modifying Docker Compose Config
 - If you want to change the game port, add `-port <port>` to `EXTRA_PARAMS`.
 - Update your router / cloud security list / host firewall rules to the matching CS2 port set.
-- In addition to the game port itself, verify related SourceTV/client/Steam-LAN ports against current CS2/Valve server documentation before exposing ports.
-- Defaults in this repo: `27020/udp` (SourceTV), `27005/udp` (client), `26900/udp` (Steam-LAN).
+- If you keep the default server configuration in this repo, expose: `27020/udp` (SourceTV), `27005/udp` (client), `26900/udp` (Steam-LAN).
+- If you run non-default or custom CS2 networking settings, verify the related ports in current CS2/Valve server documentation before exposing them.
 - All EXTRA_PARAMS can be found by googling what you need. I cannot help you and will not help you on finding all the extra parameters that can be added. The current EXTRA_PARAMS is good enough for the server to run.
 - Currently, installing MetaMod and CounterStrikeSharp is available. This will change in the future when I can dedicate some time to polishing this project.
 - If you are installing plugins onto the server, you MUST disable ALWAYS_UPDATE_ON_START and enable INSTALL_MODDING. You must also change DOTNET_EnableWriteXorExecute to 0.
