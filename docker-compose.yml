@@ -11,7 +11,7 @@ services:
         limits:
           cpus: '3.5'
           memory: 20G
-    # Nutzt Host-Netzwerk für niedrigere Latenz (ohne docker-proxy)
+    # Uses host networking for lower latency (without docker-proxy)
     network_mode: host
 
     restart: unless-stopped

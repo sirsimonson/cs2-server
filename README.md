@@ -71,7 +71,7 @@ Major thanks to [sa-shiro/Satisfactory-Dedicated-Server-ARM64-Docker](https://gi
 Once you finish step 5, congrats! The server is now ready to be used. 
 
 # Modifying Docker Compose Config
-- If you want to change the game port, you can add `-port <port>` to `EXTRA_PARAMS` and then update your router / cloud security list / host firewall rules to the same port set.
+- If you want to change the game port, you can add `-port <port>` to `EXTRA_PARAMS` and then update your router / cloud security list / host firewall rules to the matching CS2 port set. If you run non-default ports, verify the full required mapping (including related ports such as SourceTV/client ports) in current CS2 server docs.
 - All EXTRA_PARAMS can be found by googling what you need. I cannot help you and will not help you on finding all the extra parameters that can be added. The current EXTRA_PARAMS is good enough for the server to run.
 - Currently, installing MetaMod and CounterStrikeSharp is available. This will change in the future when I can dedicate some time to polishing this project.
 - If you are installing plugins onto the server, you MUST disable ALWAYS_UPDATE_ON_START and enable INSTALL_MODDING. You must also change DOTNET_EnableWriteXorExecute to 0.
