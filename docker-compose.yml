@@ -45,9 +45,6 @@ services:
         source: ./fex-data
         target: /home/steam/.fex-emu
         is_directory: true
-      - type: bind
-        source: ./init-server.sh
-        target: /home/steam/init-server.sh
       
     stdin_open: true
     tty: true
