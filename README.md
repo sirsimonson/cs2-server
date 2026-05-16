@@ -118,3 +118,170 @@ To be honest, a lot of GPT was used to make this project. Most of the time, when
 However, it works. And that I am glad about. And I hope that this works for you, otherwise this was all for naught.
 
 I have also tried to compress [zThundy/CS2-Server-on-ARM](https://github.com/zThundy/CS2-Server-on-ARM)'s Box64 implementation into a docker compose file, but it was riddled with segmentation faults left and right. When Box64 comes to be more stable, I will attempt it again, but for now, FEX will do.
+
+---
+
+# CS2 Dedicated Server – Debugging & Setup Notes
+
+> Oracle Cloud (OCI) · Coolify · Host: `<YOUR_SERVER_IP>`
+
+---
+
+## Architecture
+
+```
+Internet
+   │
+   ▼
+Oracle VCN Security List       ← Outer Door (Cloud-Level)
+   │
+   ▼
+Ubuntu Host (<YOUR_SERVER_IP>)
+   │  iptables INPUT chain      ← Inner Door (OS-Level)
+   │
+   ▼
+docker-proxy (0.0.0.0:27015)   ← Port Bridge (Userspace)
+   │
+   ▼
+cs2-server Container (10.0.7.x:27015)
+```
+
+---
+
+## Coolify App-Konfiguration
+
+- **UUID:** `<YOUR_COOLIFY_APP_UUID>`
+- **Build Pack:** `dockercompose`
+- **Proxy/Traefik:** deaktiviert (keine Traefik-Labels)
+- **Network Mode:** Bridge (custom Coolify-Netzwerk)
+- **Server Name (A2S Query):** `<YOUR_SERVER_NAME>`
+
+### docker-compose Ports (korrekt konfiguriert ✓)
+```yaml
+ports:
+  - "27015:27015/udp"
+  - "27015:27015/tcp"
+  - "27020:27020/udp"
+  - "26900:26900/udp"
+  - "27005:27005/udp"
+```
+
+---
+
+## Debugging-Geschichte
+
+### Problem: `Sent: 21 pkts, Recv: 0 pkts`
+Classic "Oracle Double-Lock" – zwei Firewalls blockieren gleichzeitig.
+
+---
+
+## Fix 1 – iptables (OS-Ebene) ✅ ERLEDIGT
+
+Oracle-Instanzen kommen mit einem restriktiven INPUT REJECT als Regel 6.
+Docker-proxy lauscht auf dem Host → Traffic geht durch INPUT, nicht FORWARD.
+
+```bash
+sudo iptables -I INPUT 6 -m state --state NEW -p udp --dport 27015 -j ACCEPT
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 27015 -j ACCEPT
+sudo iptables -I INPUT 6 -m state --state NEW -p udp --dport 27020 -j ACCEPT
+sudo iptables -I INPUT 6 -m state --state NEW -p udp --dport 26900 -j ACCEPT
+sudo iptables -I INPUT 6 -m state --state NEW -p udp --dport 27005 -j ACCEPT
+sudo netfilter-persistent save
+```
+
+**Ergebnis:** Rules 6–10 in INPUT chain, persistent über Reboots.
+
+---
+
+## Fix 2 – Oracle VCN Security List ⚠️ MANUELL IM OCI CONSOLE
+
+**Wo:** Networking → Virtual Cloud Networks → VCN → Security Lists → Default Security List
+
+**Bug:** Quellportbereich war fälschlicherweise auf den gleichen Port gesetzt (z.B. `27015 → 27015`).
+CS2-Clients verbinden sich von einem zufälligen Ephemeral-Port → Oracle hat jeden Packet gedroppt.
+
+### Korrekte Ingress-Regeln:
+
+| Zustandslos | Quelle | Protokoll | **Quellport** | Zielport | Beschreibung |
+|-------------|--------|-----------|--------------|----------|-------------|
+| Nein | 0.0.0.0/0 | UDP | **Alle** | 27015 | CS2 Game UDP |
+| Nein | 0.0.0.0/0 | TCP | **Alle** | 27015 | CS2 RCON/Steam TCP |
+| Nein | 0.0.0.0/0 | UDP | **Alle** | 27020 | CS2 SourceTV |
+| Nein | 0.0.0.0/0 | UDP | **Alle** | 26900 | Steam LAN |
+| Nein | 0.0.0.0/0 | UDP | **Alle** | 27005 | CS2 Client |
+
+> **Wichtig:** `Quellportbereich = Alle` – nicht den Zielport eintragen!
+
+---
+
+## Verifikation ohne CS2-Client
+
+```python
+# A2S_INFO Steam Server Query (lokal auf dem Host ausführen)
+python3 -c "
+import socket
+query = b'\xFF\xFF\xFF\xFF\x54Source Engine Query\x00'
+sock = None
+try:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(5)
+    sock.sendto(query, ('127.0.0.1', 27015))
+    data, _ = sock.recvfrom(4096)
+    if data[4:5] == b'\x41':
+        challenge = data[5:9]
+        sock.sendto(b'\xFF\xFF\xFF\xFF\x54Source Engine Query\x00' + challenge, ('127.0.0.1', 27015))
+        data, _ = sock.recvfrom(4096)
+    print('OK' if data[4:5] == b'\x49' else 'FAIL', data[:32].hex())
+except (socket.timeout, OSError) as e:
+    print('FAIL', str(e))
+finally:
+    if sock is not None:
+        sock.close()
+"
+```
+
+**Erwartete Antwort:** Server-Name `<YOUR_SERVER_NAME>`, Map `de_dust2`, AppID `730`
+
+### Externer Test (vom lokalen Rechner):
+```bash
+python3 -c "
+import socket
+query = b'\xFF\xFF\xFF\xFF\x54Source Engine Query\x00'
+sock = None
+try:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(5)
+    sock.sendto(query, ('<YOUR_SERVER_IP>', 27015))
+    data, _ = sock.recvfrom(4096)
+    print('OK' if data[4:5] in (b'\x49', b'\x41') else 'FAIL', data[:32].hex())
+except (socket.timeout, OSError) as e:
+    print('FAIL', str(e))
+finally:
+    if sock is not None:
+        sock.close()
+"
+# Wenn Timeout → Oracle Security List blockiert noch
+# Wenn Antwort → Server vollständig erreichbar
+```
+
+---
+
+## Downtime bei Deployments vermeiden (Plan)
+
+| Stufe | Maßnahme | Aufwand | Wirkung |
+|-------|----------|---------|---------|
+| 1 | Env-Vars direkt in Coolify ändern (kein Rebuild) | Sofort | Mittel |
+| 2 | Pre-built Image → Registry → Coolify pull statt build | 1–2h | Hoch |
+| 3 | RCON-Warning vor Restart (`say "Restart in 2min"`) | 30min | Spieler-freundlich |
+| 4 | Blue-Green (zweiter Container, Port-Swap) | Komplex | Zero-Downtime |
+
+---
+
+## Port-Referenz CS2
+
+| Port | Protokoll | Verwendung |
+|------|-----------|------------|
+| 27015 | UDP + TCP | Haupt-Gameport (Connect + RCON) |
+| 27020 | UDP | SourceTV / HLTV |
+| 27005 | UDP | CS2 Client-Port |
+| 26900 | UDP | Steam LAN Discovery |
