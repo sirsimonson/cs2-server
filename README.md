@@ -50,19 +50,32 @@ Major thanks to [sa-shiro/Satisfactory-Dedicated-Server-ARM64-Docker](https://gi
    ```
 
 5. **Port Access and Forwarding**:  
-   On your router (or Oracle Cloud Security List), open the ports 27015 TCP and UDP. 27015 is the default port for Counter-Strike 2 servers.  
+   This setup uses `network_mode: host`, so Docker does not publish ports through `docker-proxy`.  
+   Open the required CS2 ports directly on your router / cloud security list:
+   - `27015/tcp`
+   - `27015/udp`
+   - `27020/udp`
+   - `26900/udp`
+   - `27005/udp`
 
-   You will also need to allow the port over the firewall. This can be done however your system is built. For this example, I will be showcasing an example of UFW. Run the command to allow port 27015/tcp and udp to communicate to the outside world:
+   You will also need to allow the same ports on the host firewall. For UFW:
    ```
    sudo ufw allow 27015/tcp
    sudo ufw allow 27015/udp
+   sudo ufw allow 27020/udp
+   sudo ufw allow 26900/udp
+   sudo ufw allow 27005/udp
    sudo ufw reload
    ```
 
 Once you finish step 5, congrats! The server is now ready to be used. 
 
 # Modifying Docker Compose Config
-- If you want to change the port to some other port, you can add -port \<port> to the EXTRA_PARAMS and change the Docker Compose ports as well.
+- If you want to change the game port, add `-port <port>` to `EXTRA_PARAMS`.
+- Update your router / cloud security list / host firewall rules to the matching CS2 port set.
+- If you run non-default settings (for example custom SourceTV/client ports), verify and expose related ports using Valve documentation:
+  https://developer.valvesoftware.com/wiki/Counter-Strike_2/Dedicated_Servers
+- Example: this repo uses `27020/udp` for SourceTV.
 - All EXTRA_PARAMS can be found by googling what you need. I cannot help you and will not help you on finding all the extra parameters that can be added. The current EXTRA_PARAMS is good enough for the server to run.
 - Currently, installing MetaMod and CounterStrikeSharp is available. This will change in the future when I can dedicate some time to polishing this project.
 - If you are installing plugins onto the server, you MUST disable ALWAYS_UPDATE_ON_START and enable INSTALL_MODDING. You must also change DOTNET_EnableWriteXorExecute to 0.
