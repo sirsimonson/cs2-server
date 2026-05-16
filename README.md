@@ -75,6 +75,11 @@ Once you finish step 5, congrats! The server is now ready to be used.
     +mat_queue_mode 2 -nojoy -nohltv +engine_no_focus_sleep 0 +fps_max 64 +sv_max_usercmd_future_ticks 4 +sv_hibernate_when_empty 0 +map de_dust2 +hostname "Müllers Mahlwerk | Wer zuerst schießt, mahlt zuerst"
     ```
 - Set your own RCON password explicitly via `EXTRA_PARAMS` (for example `+rcon_password "your_secure_password_here"`) instead of relying on any default; the server can run without RCON if you omit this.
+- 🚫 **Merge/Deploy blocker:** do not merge or deploy if a plaintext `+rcon_password` is hardcoded in `docker-compose.yml`, checked-in `.env` files, or docs examples.
+- Preferred operator workflow for RCON:
+  1. Keep compose defaults without any `+rcon_password`.
+  2. Inject `+rcon_password` only through a secret/override at deploy time (Coolify environment secret, not committed files).
+  3. Rotate the password whenever it was exposed in chat, commits, screenshots, or ticket text.
 - Optional plugin URL overrides are supported via env vars:
   - `ZENITH_URL_OVERRIDE`
   - `SIMPLERANKS_URL_OVERRIDE`
@@ -86,6 +91,16 @@ Once you finish step 5, congrats! The server is now ready to be used.
   - `configs/plugins/CS2-Deathmatch/CS2-Deathmatch.json` headshot-only defaults (`Enabled=true`, commands include `!hs` and `!onlyhs`)
 - You can find your STEAM_GAMESERVER_API by visiting [Valve's GameServer page](https://steamcommunity.com/dev/managegameservers). Once you go in there, you can create a new game server account by putting 730 in the App ID textbox, and whatever you want for the memo. I recommend putting `cs2-arm server` in the memo.
 - I am still learning about docker compose, so this may be very insecure and I am sorry about that. 
+
+## Backlog Issue Draft (Security): Secret-backed RCON rollout
+
+Use this as a separate backlog ticket before merge/deploy:
+
+- [ ] Add a deploy-time secret for RCON in Coolify (no plaintext in repo)
+- [ ] Keep `docker-compose.yml` default `EXTRA_PARAMS` free of `+rcon_password`
+- [ ] Add/update operator docs so RCON is explicit opt-in only
+- [ ] Validate logs/startup output do not print the full RCON value
+- [ ] Rotate and replace any previously shared RCON values
 
 # Common Questions
 - **Q**: Can the server handle 10 players?
