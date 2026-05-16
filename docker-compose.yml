@@ -27,13 +27,16 @@ services:
         hard: -20
         
     environment:
-      - STEAM_GAMESERVER_API=${STEAM_TOKEN:?}
-      - EXTRA_PARAMS=${EXTRA_PARAMS}
-      - ALWAYS_UPDATE_ON_START=${ALWAYS_UPDATE_ON_START:-true}
-      - INSTALL_MODDING=${INSTALL_MODDING:-false}
-      - DOTNET_EnableWriteXorExecute=1
-      - CPU_CORE_COUNT=${CPU_CORE_COUNT:?3}
-      - TZ=Europe/Berlin
+      STEAM_GAMESERVER_API: ${STEAM_TOKEN:?}
+      # Override EXTRA_PARAMS to customize map/hostname/security flags (for RCON set +rcon_password explicitly in EXTRA_PARAMS).
+      EXTRA_PARAMS: '${EXTRA_PARAMS:-+mat_queue_mode 2 -nojoy -nohltv +engine_no_focus_sleep 0 +fps_max 64 +sv_max_usercmd_future_ticks 4 +sv_hibernate_when_empty 0 +map de_dust2 +hostname "Müllers Mahlwerk | Wer zuerst schießt, mahlt zuerst"}'
+      ALWAYS_UPDATE_ON_START: ${ALWAYS_UPDATE_ON_START:-false}
+      INSTALL_MODDING: ${INSTALL_MODDING:-true}
+      INSTALL_PLUGIN_PACK: ${INSTALL_PLUGIN_PACK:-true}
+      # Required for CounterStrikeSharp under ARM/FEX emulation; overriding from 0 is not recommended unless you fully validate plugin/runtime compatibility.
+      DOTNET_EnableWriteXorExecute: ${DOTNET_EnableWriteXorExecute:-0}
+      CPU_CORE_COUNT: ${CPU_CORE_COUNT:?3}
+      TZ: Europe/Berlin
       
     volumes:
       - cs2-data:/cs2-data
