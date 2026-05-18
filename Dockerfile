@@ -20,7 +20,7 @@ RUN mkdir Build && cd Build && \
 FROM debian:bookworm-slim
 SHELL ["/bin/bash", "-c"]
 
-RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y curl python3 sudo locales unzip libsdl2-2.0-0 libepoxy0 libssl3 libstdc++6 squashfs-tools squashfuse libqt5widgets5 libqt5qml5 gosu && rm -rf /var/lib/apt/lists/*
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y curl python3 sudo locales unzip libsdl2-2.0-0 libepoxy0 libssl3 libstdc++6 squashfs-tools squashfuse libqt5widgets5 libqt5qml5 gosu jq && rm -rf /var/lib/apt/lists/*
 
 RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
     locale-gen en_US.UTF-8
