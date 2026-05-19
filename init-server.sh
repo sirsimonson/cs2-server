@@ -170,8 +170,19 @@ fetch_mod_versions() {
   echo "Fetching remote version info"
 
   if [ -z "$MMS_CUSTOM_URL" ]; then
-    MMS_LATEST_FILE=$(curl -sL https://mms.alliedmods.net/mmsdrop/2.0/mmsource-latest-linux)
-    MMS_TARGET_URL="https://mms.alliedmods.net/mmsdrop/2.0/$MMS_LATEST_FILE"
+    echo "Querying GitHub API for latest Metamod pre-release..."
+    # Fetch the full releases array from GitHub
+    local mms_api_response
+    mms_api_response=$(curl -s https://api.github.com/repos/alliedmodders/metamod-source/releases)
+    
+    # forcing prereleases (only dev builds are compatible)
+    MMS_LATEST_FILE=$(echo "$mms_api_response" | jq -r 'map(select(.prerelease == true)) | .[0].tag_name')
+    
+    MMS_TARGET_URL=$(echo "$mms_api_response" | jq -r 'map(select(.prerelease == true)) | .[0].assets[] | select(.name | contains("linux") and endswith(".tar.gz")) | .browser_download_url')
+
+    if [ "$MMS_TARGET_URL" == "null" ] || [ -z "$MMS_TARGET_URL" ]; then
+       echo "ERROR: Failed to fetch MMS from GitHub API. You might be rate-limited by GitHub."
+    fi
   else
     MMS_LATEST_FILE="custom-url-defined"
     MMS_TARGET_URL="$MMS_CUSTOM_URL"
