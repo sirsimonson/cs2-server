@@ -190,7 +190,7 @@ fetch_mod_versions() {
 
   if [ -z "$CSS_CUSTOM_URL" ]; then
     CSS_LATEST_TAG=$(curl -s https://api.github.com/repos/roflmuffin/CounterStrikeSharp/releases/latest | jq -r '.tag_name')
-    CSS_TARGET_URL=$(curl -s https://api.github.com/repos/roflmuffin/CounterStrikeSharp/releases/tags/$CSS_LATEST_TAG | jq -r '.assets[] | select(.name | startswith("counterstrikesharp-with-runtime-linux")) | .browser_download_url')
+    CSS_TARGET_URL=$(curl -s "https://api.github.com/repos/roflmuffin/CounterStrikeSharp/releases/tags/$CSS_LATEST_TAG" | jq -r '.assets[] | select(.name | startswith("counterstrikesharp-with-runtime-linux")) | .browser_download_url')
 
     # fallback if instance has been restarted too many times
     if [ "$CSS_TARGET_URL" == "null" ] || [ -z "$CSS_TARGET_URL" ]; then
