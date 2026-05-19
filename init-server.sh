@@ -337,7 +337,32 @@ start_server() {
   local exec_string="exec nice -n $priority taskset -c $allowed_cpus FEXBash \"$cs2_cmd\""
 
   echo "Exec args: $exec_string"
-  eval "$exec_string"
+  # eval "$exec_string"
+
+  # CI/CD friendly execute
+  if [ "${CI_TEST_MODE:-false}" = "true" ]; then
+    echo "CI Test Mode: starting server and looking for pattern"
+    eval "$exec_string" > /tmp/server_ci.log 2>&1 &
+    SERVER_PID=$!
+
+    pattern="Connection to Steam servers successful."
+    timeout=120
+    while [ $timeout -gt 0 ]; do
+      if grep -q "$pattern" /tmp/server_ci.log 2>/dev/null; then
+        echo "SUCCESS: Server started correctly"
+        kill $SERVER_PID 2>/dev/null || true
+        exit 0
+      fi
+      sleep 2
+      timeout=$((timeout - 2))
+    done
+    echo "ERROR: Server didn't start within the timeout"
+    cat /tmp/server_ci.log
+    kill $SERVER_PID 2>/dev/null || true
+    exit 1
+  else
+    eval "$exec_string"
+  fi
 }
 
 main() {
