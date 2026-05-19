@@ -9,21 +9,20 @@ on:
 jobs:
   shellcheck:
     name: Lint bash scripts
-    runs-on: ubuntu-22.04-arm
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Install ShellCheck
-        run: sudo apt-get update && sudo apt-get install -y shellcheck
-      
       - name: Run ShellCheck
-        run: find . -name "*.sh" -not -path '*/.*' -exec shellcheck {} +
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: './'
 
 
   build-test:
     name: Build docker images
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04-arm
     needs: shellcheck
     steps:
       - name: Checkout code
