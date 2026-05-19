@@ -82,7 +82,7 @@ manage_game_server() {
     return
   fi
 
-  if [ "$ALWAYS_UPDATE_ON_START" == "true"]; then
+  if [ "$ALWAYS_UPDATE_ON_START" == "true" ]; then
     echo "Querying Steam API for CS2 build ID"
     local local_build
     local_build=$(grep -Po '"buildid"\s+"\K[0-9]+' "$appmanifest")
@@ -90,10 +90,12 @@ manage_game_server() {
     local remote_build
     remote_build=$(curl -s https://api.steamcmd.net/v1/info/730 | jq -r '.data["730"].depots.branches.public.buildid')
 
+    # if the remote build cannot be found, force a check with steamcmd
     if [ -z "$remote_build" ] || [ "$remote_build" == "null" ]; then
       echo "WARNING: Failed to fetch remote Build ID. Using SteamCMD to check for updates"
       update_game_files
       export SERVER_JUST_UPDATED="true"
+    # if the local build is different from the remote build, update
     elif [ "$local_build" != "$remote_build" ]; then
       echo "Updating: Local Build: $local_build | Remote Build: $remote_build"
       update_game_files
@@ -104,134 +106,228 @@ manage_game_server() {
   fi
 }
 
+# patch the gameinfo file for either installation or removal of metamod
+patch_gameinfo() {
+  local action=$1 # arg for "install" or "remove"
+  local gameinfo_path="$GAME_DIR/gameinfo.gi"
+
+  if [ -f "$gameinfo_path" ]; then
+    if [ "$action" == "install" ] && ! grep -q "addons/metamod" "$gameinfo_path"; then
+      echo "Patching gameinfo.gi for Metamod"
+      sed -i '/SearchPaths/a \t\t\tGame\tcsgo/addons/metamod' "$gameinfo_path"
+    elif [ "$action" == "remove" ] && grep -q "addons/metamod" "$gameinfo_path"; then
+      echo "Removing Metamod hook from gameinfo.gi"
+      sed -i '/addons\/metamod/d' "$gameinfo_path"
+    fi
+  fi
+}
+
+enable_mods() {
+  echo "Enabling mods"
+  
+  fetch_mod_versions
+  
+  install_and_update_mods
+}
+
+# disables modding on the server and reverts to vanilla state
+disable_mods() {
+  echo "Disabling mods and reverting server to vanilla"
+  if [ -d "$CSS_DIR" ] || [ -d "$MMS_DIR" ]; then
+    echo "Found mods, creating backup"
+    local backup_dir
+    backup_dir="/cs2-data/mod_backups/backup_$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "$backup_dir/counterstrikesharp" "$backup_dir/metamod"
+
+    # backup CounterStrikeSharp
+    [ -d "$CSS_DIR/plugins" ] && cp -r "$CSS_DIR/plugins" "$backup_dir/counterstrikesharp/"
+    [ -d "$CSS_DIR/configs" ] && cp -r "$CSS_DIR/configs" "$backup_dir/counterstrikesharp/"
+
+    # backup metamod
+    if [ -d "$MMS_DIR" ]; then
+      for item in "$MMS_DIR"/*; do
+        if [ -e "$item" ] && [ "$(basename "$item")" != "bin" ]; then
+          cp -r "$item" "$backup_dir/metamod/"
+        fi
+      done
+    fi
+
+    echo "Backup saved to $backup_dir"
+    echo "Wiping mod files from server"
+    rm -rf "$CSS_DIR" "$MMS_DIR"
+    rm -f "$GAME_DIR/addons/metamod.vdf"
+  else
+    echo "No mods detected, skipping removal"
+  fi
+
+  patch_gameinfo "remove"
+  echo "Server is now vanilla"
+}
+
+# fetches remote versions and url for comparison later
+fetch_mod_versions() {
+  echo "Fetching remote version info"
+
+  if [ -z "$MMS_CUSTOM_URL" ]; then
+    MMS_LATEST_FILE=$(curl -sL https://mms.alliedmods.net/mmsdrop/2.0/mmsource-latest-linux)
+    MMS_TARGET_URL="https://mms.alliedmods.net/mmsdrop/2.0/$MMS_LATEST_FILE"
+  else
+    MMS_LATEST_FILE="custom-url-defined"
+    MMS_TARGET_URL="$MMS_CUSTOM_URL"
+  fi
+
+  if [ -z "$CSS_CUSTOM_URL" ]; then
+    CSS_LATEST_TAG=$(curl -s https://api.github.com/repos/roflmuffin/CounterStrikeSharp/releases/latest | jq -r '.tag_name')
+    CSS_TARGET_URL=$(curl -s https://api.github.com/repos/roflmuffin/CounterStrikeSharp/releases/tags/$CSS_LATEST_TAG | jq -r '.assets[] | select(.name | startswith("counterstrikesharp-with-runtime-linux")) | .browser_download_url')
+
+    # fallback if instance has been restarted too many times
+    if [ "$CSS_TARGET_URL" == "null" ] || [ -z "$CSS_TARGET_URL" ]; then
+       echo "ERROR: Failed to fetch CSS from GitHub API. Falling back to stable build..."
+       CSS_LATEST_TAG="v1.0.368"
+       CSS_TARGET_URL="https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v1.0.368/counterstrikesharp-with-runtime-linux-1.0.368.zip"
+    fi
+  else
+    CSS_LATEST_TAG="custom-url-defined"
+    CSS_TARGET_URL="$CSS_CUSTOM_URL"
+  fi
+}
+
+# checks local mod platforms, then 
+install_and_update_mods() {
+  local update_mms=false
+  local update_css=false
+
+  # checks if metamod is missing
+  if [ ! -f "$GAME_DIR/addons/metamod.vdf" ] || [ ! -f "$MMS_VERSION_FILE" ]; then
+    update_mms=true
+  # checks if metamod version is outdated/weird
+  elif [ "$(cat "$MMS_VERSION_FILE")" != "$MMS_LATEST_FILE" ] && [ -z "$MMS_CUSTOM_URL" ]; then
+    echo "Metamod update: $(cat "$MMS_VERSION_FILE") ->  $MMS_LATEST_FILE"
+    update_mms=true
+  fi
+
+  # checks if counterstrikesharp is missing
+  if [ ! -f "$CSS_DIR/bin/linuxsteamrt64/counterstrikesharp.so" ] || [ ! -f "$CSS_VERSION_FILE" ]; then
+    update_css=true
+  # checks if counterstrikesharp is outdated/weird
+  elif [ "$(cat "$CSS_VERSION_FILE")" != "$CSS_LATEST_TAG" ] && [ -z "$CSS_CUSTOM_URL" ]; then
+    echo "CounterStrikeSharp update: $(cat "$CSS_VERSION_FILE") -> $CSS_LATEST_TAG"
+    update_css=true
+  fi
+
+  # backing up metamod configs/plugins if there has been an update
+  if { [ "$SERVER_JUST_UPDATED" == "true" ] || [ "$update_mms" == "true" ]; } && [ -d "$MMS_DIR" ]; then
+    echo "Backing up Metamod configs/plugins to /tmp/mms_backup"
+    mkdir -p /tmp/mms_backup/
+    for item in "$MMS_DIR"/*; do
+      if [ -e "$item" ] && [ "$(basename "$item")" != "bin" ]; then cp -r "$item" /tmp/mms_backup/; fi
+    done
+    rm -rf "$MMS_DIR"
+    update_mms=true
+  fi
+
+  # backing up css configs/plugins if there has been an update
+  if { [ "$SERVER_JUST_UPDATED" == "true" ] || [ "$update_css" == "true" ]; } && [ -d "$CSS_DIR/plugins" ]; then
+    echo "Backing up CounterStrikeSharp plugins to temporary RAM disk..."
+    mkdir -p /tmp/css_backup/
+    cp -r "$CSS_DIR/plugins" /tmp/css_backup/
+    cp -r "$CSS_DIR/configs" /tmp/css_backup/
+    rm -rf "$CSS_DIR"
+    update_css=true
+  fi
+
+  #downloading metamod
+  if [ "$update_mms" == "true" ]; then
+    echo "Downloading and Installing Metamod"
+    mkdir -p "$GAME_DIR/addons"
+    curl -sL "$MMS_TARGET_URL" | tar zx -C "$GAME_DIR/"
+    echo "$MMS_LATEST_FILE" > "$MMS_VERSION_FILE"
+  else
+    echo "Metamod is up to date"
+  fi
+
+  #downloading css
+  if [ "$update_css" == "true" ]; then
+    echo "Downloading and Installing CounterStrikeSharp"
+    curl -sL "$CSS_TARGET_URL" -o /tmp/css.zip
+    unzip -o -q /tmp/css.zip -d "$GAME_DIR/"
+    rm /tmp/css.zip
+    echo "$CSS_LATEST_TAG" > "$CSS_VERSION_FILE"
+  else
+    echo "CounterStrikeSharp is up to date"
+  fi
+
+  # RESTORING BACKUPS
+  if [ -d "/tmp/mms_backup" ]; then
+    echo "Restoring Metamod plugins and configs..."
+    cp -rf /tmp/mms_backup/* "$MMS_DIR/"
+    rm -rf /tmp/mms_backup
+  fi
+
+  if [ -d "/tmp/css_backup" ]; then
+    echo "Restoring CounterStrikeSharp plugins and configs..."
+    cp -rf /tmp/css_backup/plugins "$CSS_DIR/"
+    cp -rf /tmp/css_backup/configs "$CSS_DIR/"
+    rm -rf /tmp/css_backup
+  fi
+
+  patch_gameinfo "install"
+}
+
+# manages the modding state of the server
+manage_modding() {
+  export CSS_DIR="$GAME_DIR/addons/counterstrikesharp"
+  export MMS_DIR="$GAME_DIR/addons/metamod"
+  export MMS_VERSION_FILE="$MMS_DIR/.mms_version"
+  export CSS_VERSION_FILE="$CSS_DIR/.css_version"
+
+  export MMS_CUSTOM_URL="${MMS_URL:-}"
+  export CSS_CUSTOM_URL="${CSS_URL:-}"
+
+  if [ "${ENABLE_MODDING:-false}" != "true" ]; then
+    disable_mods
+  else
+    enable_mods
+  fi
+}
+
+start_server() {
+  echo "Starting CS2 Server"
+  cd "$CS2_DIR" || exit 1
+  
+  export LD_LIBRARY_PATH="/cs2-data/game/bin/linuxsteamrt64:$LD_LIBRARY_PATH"
+  pkill -9 FEXServer || true
+
+  local allowed_cpus
+  allowed_cpus=$(taskset -cp $$ | awk -F': ' '{print $2}')
+  echo "Server allowed for $allowed_cpus cores"
+
+  local thread_count=${CPU_CORE_COUNT:-$(nproc)}
+  echo "Allocating $thread_count threads to CS2"
+
+  local map=${STARTUP_MAP:-de_dust2}
+
+  local priority=${SERVER_NICENESS:-0}
+  local exec_string="exec nice -n $priority taskset -c $allowed_cpus FEXBash ./game/bin/linuxsteamrt64/cs2 -dedicated -usercon +map $map -threads $thread_count"
+
+  if [ -n "$STEAM_GAMESERVER_API" ]; then
+    exec_string="$exec_string +sv_setsteamaccount $STEAM_GAMESERVER_API"
+  else
+    echo "WARNING: STEAM_GAMESERVER_API is missing"
+  fi
+
+  exec_string="$exec_string $EXTRA_PARAMS"
+
+  echo "Exec args: $exec_string"
+  eval "$exec_string"
+}
+
 main() {
   setup_fex
+  setup_steamcmd
+  manage_game_server
+  manage_modding
+  start_server
 }
 
 main
-
-
-
-# function installServer() {
-#   # Add '-beta experimental' before 'validate' if you want to play on the experimental branch (check if CSS has updated the branch first!!!)
-#   FEXBash './steamcmd.sh +@sSteamCmdForcePlatformBitness 64 +force_install_dir "/cs2-data" +login anonymous +app_update 730 validate +quit'
-# }
-
-# # LAST URL UPDATE: 1/23/2026
-# function installModding() {
-#   # leave as is until something breaks, idk if i should make it grab latest releases tho
-#   MMS_URL="https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1383-linux.tar.gz"
-#   CSS_URL="https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v1.0.359/counterstrikesharp-with-runtime-linux-1.0.359.zip"
-
-#   if [ ! -f "/cs2-data/game/csgo/addons/metamod.vdf" ]; then
-#     echo "Downloading Metamod"
-#     mkdir -p /cs2-data/game/csgo/addons
-#     curl -L "$MMS_URL" | tar zx -C /cs2-data/game/csgo/
-#   else
-#     echo "Metamod found, skipping download."
-#   fi
-
-#   if [ ! -f "/cs2-data/game/csgo/addons/counterstrikesharp/bin/linuxsteamrt64/counterstrikesharp.so" ]; then
-#     echo "Downloading CounterStrikeSharp"
-#     curl -L "$CSS_URL" -o /tmp/css.zip
-#     unzip -o -q /tmp/css.zip -d /cs2-data/game/csgo/
-#     rm /tmp/css.zip
-#   else
-#     echo "CounterStrikeSharp found, skipping download."
-#   fi
-
-#   if grep -q "Game_LowViolence" "/cs2-data/game/csgo/gameinfo.gi"; then
-#     if ! grep -q "addons/metamod" "/cs2-data/game/csgo/gameinfo.gi"; then
-#       echo "Patching gameinfo.gi"
-#       # lol idk if i should keep this or find a different way
-#       sed -i '/Game_LowViolence/a \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Game\tcsgo/addons/metamod' "/cs2-data/game/csgo/gameinfo.gi"
-#     fi
-#   else
-#     echo "Cannot find Game_LowViolence"
-#   fi
-# }
-
-# function main() {
-#   rm -f /tmp/*FEXServer.Socket*
-
-#   if [ ! -d "/home/steam/.fex-emu/RootFS/Ubuntu_22_04" ]; then
-#     echo "RootFS not found. Cleaning RootFS and running FEXRootFSFetcher."
-#     mkdir -p /home/steam/.fex-emu/RootFS
-
-#     # Clean up potential stale/corrupted downloads
-#     rm -f /home/steam/.fex-emu/RootFS/*.sqsh
-
-#     echo "9" | FEXRootFSFetcher -y -x # should be ubuntu 22.04
-#   else
-#     echo "FEX RootFS detected. Skipping download."
-#   fi
-
-#   # Fix for steamclient.so not being found
-#   mkdir -p /home/steam/.steam/sdk64
-#   ln -sfn /home/steam/Steam/linux64/steamclient.so /home/steam/.steam/sdk64/steamclient.so
-
-#   cd /home/steam/Steam
-
-#   # Check if we have proper read/write permissions to /cs2-data
-#   if [ ! -r "/cs2-data" ] || [ ! -w "/cs2-data" ]; then
-#     echo 'ERROR: I do not have read/write permissions to /cs2-data! Please run "sudo chown -R 1000:1000 cs2-data/" on host machine, then try again.'
-#     exit 1
-#   fi
-
-#   # FEX cache system doesn't work right now, maybe enabled in future
-#   # same permission check for ~/.cache
-#   #if [ ! -r "/home/steam/.cache/fex-emu" ] || [ ! -w "/home/steam/.cache/fex-emu" ]; then
-#   #  echo 'ERROR: I do not have read/write permissions to ~/.cache/fex-emu! Please run "sudo chown -R 1000:1000 fex-cache/" on host machine, then try again.'
-#   #  #exit 1
-#   #fi
-
-#   # legacy, replaced by RootFS check above
-#   # same permission check for ~/.local/share/fex-emu/Config.json
-#   #if [ ! -r "/home/steam/.fex-emu/Config.json" ]; then
-#   #  echo 'WARNING: I cannot read ~/.fex-emu/Config.json! Please run "sudo chown -R 1000:1000 fex-config/" on host machine.'
-#   #fi
-
-#   # Check for SteamCMD updates
-#   echo 'Checking for SteamCMD updates...'
-#   FEXBash './steamcmd.sh +quit'
-
-#   # Check if the server is installed
-#   if [ ! -f "/cs2-data/game/bin/linuxsteamrt64/cs2" ]; then
-#     echo 'Server not found! Installing...'
-#     installServer
-#   fi
-
-#   # If auto updates are enabled, try updating
-#   if [ "$ALWAYS_UPDATE_ON_START" == "true" ]; then
-#     echo 'Checking for updates...'
-#     installServer
-#   fi
-
-#   if [ "$INSTALL_MODDING" == "true" ]; then
-#     echo 'Installing mods...'
-#     installModding
-#   fi
-
-#   echo 'Starting server...'
-
-#   cd /cs2-data
-#   # fix for cs2 not able to find linuxsteamrt64
-#   export LD_LIBRARY_PATH="/cs2-data/game/bin/linuxsteamrt64:$LD_LIBRARY_PATH"
-
-#   # priority leak fix
-#   pkill -9 FEXServer || true
-#   # Start server
-#   export CORES=$CPU_CORE_COUNT
-
-#   # nice makes the server of high importance, higher is more important and lower is less important
-#   # taskset dedicates specific cores to the emulator, else the docker container will default to using all cores
-#   if [ -z "$STEAM_GAMESERVER_API" ]; then
-#     echo "WARNING: STEAM_GAMESERVER_API is empty!"
-#     exec nice -n -10 taskset -c 0-$((CORES-1)) FEXBash "./game/bin/linuxsteamrt64/cs2 -dedicated -usercon -threads $((CORES)) $EXTRA_PARAMS"
-#   else
-#     echo "Starting server with all features..."
-#     exec nice -n -10 taskset -c 0-$((CORES-1)) FEXBash "./game/bin/linuxsteamrt64/cs2 -dedicated -usercon +sv_setsteamaccount $STEAM_GAMESERVER_API -threads $((CORES)) $EXTRA_PARAMS"
-#   fi
-# }
-
-# main
