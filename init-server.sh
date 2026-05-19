@@ -115,7 +115,7 @@ patch_gameinfo() {
   if [ -f "$gameinfo_path" ]; then
     if [ "$action" == "install" ] && ! grep -q "addons/metamod" "$gameinfo_path"; then
       echo "Patching gameinfo.gi for Metamod"
-      sed -i '/SearchPaths/a \t\t\tGame\tcsgo/addons/metamod' "$gameinfo_path"
+      sed -i '/Game_LowViolence/a \t\t\tGame\tcsgo/addons/metamod' "$gameinfo_path"
     elif [ "$action" == "remove" ] && grep -q "addons/metamod" "$gameinfo_path"; then
       echo "Removing Metamod hook from gameinfo.gi"
       sed -i '/addons\/metamod/d' "$gameinfo_path"
