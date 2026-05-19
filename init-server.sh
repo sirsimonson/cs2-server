@@ -299,6 +299,10 @@ start_server() {
   export LD_LIBRARY_PATH="/cs2-data/game/bin/linuxsteamrt64:$LD_LIBRARY_PATH"
   pkill -9 FEXServer || true
 
+  # export XDG_RUNTIME_DIR=/tmp
+  # export SDL_VIDEODRIVER=dummy
+  # export SDL_AUDIODRIVER=dummy
+
   local allowed_cpus
   allowed_cpus=$(taskset -cp $$ | awk -F': ' '{print $2}')
   echo "Server allowed for $allowed_cpus cores"
@@ -307,17 +311,19 @@ start_server() {
   echo "Allocating $thread_count threads to CS2"
 
   local map=${STARTUP_MAP:-de_dust2}
-
   local priority=${SERVER_NICENESS:-0}
-  local exec_string="exec nice -n $priority taskset -c $allowed_cpus FEXBash ./game/bin/linuxsteamrt64/cs2 -dedicated -usercon +map $map -threads $thread_count"
+
+  local cs2_cmd="./game/bin/linuxsteamrt64/cs2 -dedicated -usercon +map $map -threads $thread_count"
 
   if [ -n "$STEAM_GAMESERVER_API" ]; then
-    exec_string="$exec_string +sv_setsteamaccount $STEAM_GAMESERVER_API"
+    cs2_cmd="$cs2_cmd +sv_setsteamaccount $STEAM_GAMESERVER_API"
   else
     echo "WARNING: STEAM_GAMESERVER_API is missing"
   fi
 
-  exec_string="$exec_string $EXTRA_PARAMS"
+  cs2_cmd="$cs2_cmd $EXTRA_PARAMS"
+
+  local exec_string="exec nice -n $priority taskset -c $allowed_cpus FEXBash \"$cs2_cmd\""
 
   echo "Exec args: $exec_string"
   eval "$exec_string"
