@@ -74,6 +74,7 @@ manage_game_server() {
   echo "Checking server files"
   export SERVER_JUST_UPDATED='false'
   local appmanifest="$CS2_DIR/steamapps/appmanifest_730.acf"
+  local gameinfo_path="$GAME_DIR/gameinfo.gi"
 
   # checking if the game files exist
   if [ ! -f "$CS2_DIR/game/bin/linuxsteamrt64/cs2" ] || [ ! -f "$appmanifest" ]; then
@@ -92,7 +93,7 @@ manage_game_server() {
     remote_build=$(curl -s https://api.steamcmd.net/v1/info/730 | jq -r '.data["730"].depots.branches.public.buildid')
 
     # if the remote build cannot be found, force a check with steamcmd
-    if [ -z "$remote_build" ] || [ "$remote_build" == "null" ]; then
+    if [ -z "$remote_build" ] || [ "$remote_build" == "null" ] || [ ! -f "$gameinfo_path" ]; then
       echo "WARNING: Failed to fetch remote Build ID. Using SteamCMD to check for updates"
       update_game_files
       export SERVER_JUST_UPDATED="true"
