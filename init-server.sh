@@ -67,23 +67,32 @@ update_game_files() {
   echo "Running SteamCMD update for 730 (CS2)"
   cd "$STEAMCMD_DIR" || exit 1
 
-  # rm -rf "$CS2_DIR/steamapps/downloading"
+  rm -rf "$CS2_DIR/steamapps/downloading"
   rm -f "$STEAMCMD_DIR/appcache/appinfo.vdf"
 
-  local max_retries=3
+  local max_retries=5
   local attempt=1
+  local wait_time=5
   
   while [ $attempt -le $max_retries ]; do
     echo "SteamCMD Update attempt $attempt of $max_retries..."
     
+    local update_cmd='+app_update 730'
+    # Use validate on retries to recover from corrupt state
+    if [ $attempt -gt 1 ]; then
+      update_cmd='+app_update 730 validate'
+    fi
+
     # Check the exit code of SteamCMD
-    if FEXBash './steamcmd.sh +@sSteamCmdForcePlatformBitness 64 +force_install_dir "/cs2-data" +login anonymous +app_update 730 +quit'; then
+    if FEXBash "./steamcmd.sh +@sSteamCmdForcePlatformBitness 64 +force_install_dir \"/cs2-data\" +login anonymous $update_cmd +quit"; then
       echo "SteamCMD update successful."
       return 0
     else
-      echo "WARNING: SteamCMD failed with state 0x6 or connection error. Retrying in 5s"
-      # rm -rf "$CS2_DIR/steamapps/downloading"
-      sleep 5
+      echo "WARNING: SteamCMD failed (attempt $attempt/$max_retries). Cleaning state and retrying in ${wait_time}s..."
+      rm -rf "$CS2_DIR/steamapps/downloading"
+      rm -f "$STEAMCMD_DIR/appcache/appinfo.vdf"
+      sleep $wait_time
+      wait_time=$((wait_time * 2))
       attempt=$((attempt + 1))
     fi
   done
@@ -117,8 +126,8 @@ manage_game_server() {
     # if the remote build cannot be found, force a check with steamcmd
     if [ -z "$remote_build" ] || [ "$remote_build" == "null" ]; then
       echo "WARNING: Failed to fetch remote Build ID. Using SteamCMD to check for updates"
-      # update_game_files
-      # export SERVER_JUST_UPDATED="true"
+      update_game_files
+      export SERVER_JUST_UPDATED="true"
     # if the local build is different from the remote build, update
     elif [ "$local_build" != "$remote_build" ]; then
       echo "Updating: Local Build: $local_build | Remote Build: $remote_build"
