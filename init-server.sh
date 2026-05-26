@@ -391,7 +391,6 @@ start_server() {
   if [ "${CI_TEST_MODE:-false}" = "true" ]; then
     echo "CI Test Mode: starting server and looking for pattern"
     eval "$exec_string" > /tmp/server_ci.log 2>&1 &
-    SERVER_PID=$!
 
     pattern="Connection to Steam servers successful."
     timeout=120
