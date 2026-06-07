@@ -12,11 +12,8 @@ services:
           cpus: '3.5'
           memory: 20G
     
-    # Port-Mapping laut Guide (Outside of Proxy control)
-    ports:
-      - '27015:27015/udp'
-      - '27015:27015/tcp'
-      # add more ports if u want
+    # Host networking avoids NAT overhead that causes subtick desync
+    network_mode: host
     restart: 'unless-stopped'
     ulimits:
       nice:
