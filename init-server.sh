@@ -392,7 +392,7 @@ start_server() {
     echo "CI Test Mode: starting server and looking for pattern"
     eval "$exec_string" > /tmp/server_ci.log 2>&1 &
 
-    pattern="Connection to Steam servers successful."
+    pattern="Loading map"
     timeout=120
     while [ $timeout -gt 0 ]; do
       if grep -q "$pattern" /tmp/server_ci.log 2>/dev/null; then
