@@ -75,7 +75,7 @@ jobs:
           docker load -i /tmp/image-${{ matrix.dockerfile }}.tar
           docker image ls cs2-arm64
 
-      - name: Run server in test mode
+      - name: Run SteamCMD in test mode
         run: |
           docker run \
             --rm \
