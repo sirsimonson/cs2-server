@@ -393,7 +393,6 @@ main() {
   setup_steamcmd
 	if [ "${CI_TEST_MODE:-false}" = "true" ]; then
 		echo "CI Test Mode detected! FEX and SteamCMD initialized successfully."
-		echo "Skipping 35GB game download and server execution."
 		exit 0
 	fi
   manage_game_server
