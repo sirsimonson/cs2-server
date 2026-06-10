@@ -1,6 +1,10 @@
 services:
   cs2-server:
-    image: 'cs2-arm64'
+    build:
+      context: https://github.com/ayayrom/CS2-Server-ARM-Docker.git#main
+      dockerfile: Dockerfile 
+      # change to "Dockerfile.generic" if you are not using Oracle Ampere
+      
     container_name: 'cs2-server'
     ports:
       - '27015:27015/udp'
@@ -36,7 +40,6 @@ services:
 
     volumes:
       - './cs2-data:/cs2-data'
-      - './init-server.sh:/home/steam/init-server.sh:ro'
       - './fex-data:/home/steam/.fex-emu'
     stdin_open: true
     tty: true

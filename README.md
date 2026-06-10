@@ -5,38 +5,61 @@ Thanks to [sa-shiro/Satisfactory-Dedicated-Server-ARM64-Docker](https://github.c
 
 ## Getting Started
 
-1. **Download or Clone Repository**:  
-   You can download this repository by either the code button above or using  
-   `git clone https://github.com/ayayrom/CS2-ARM64-Server-FEX.git`
-   Next, you'll want to cd into it using this: `cd CS2-ARM64-Server-FEX`
+1. **Make directory**:  
+   by doing this: `mkdir cs2-server && cd cs2-server`
 
-2. **Environment Setup**:
-   Before building, create your environment configuration file by copying the example by doing `cp .env.example .env` and edit the values as you wish. If you want online play, you must fill out the STEAM_GAMESERVER_API by visiting [Valve's GameServer page](https://steamcommunity.com/dev/managegameservers).
+2. **Docker Compose setup**:
+   Paste this in the directory's docker-compose.yml:
+```
+services:
+  cs2-server:
+    build:
+      context: https://github.com/ayayrom/CS2-Server-ARM-Docker.git#main
+      dockerfile: Dockerfile 
+      # change to "Dockerfile.generic" if you are not using Oracle Ampere
 
-3. **Build the Docker Image**:  
-   This section will take about ~15 minutes to compile from source. If it goes beyond that, check to make sure the compilation isn't stuck.  
-   Run the command **IF YOU ARE USING ORACLE CLOUD'S AMPERE**:
-   ```
-   sudo docker build -t cs2-arm64 -f Dockerfile .
-   ```
-   Run the command **IF YOU ARE USING SOMETHING ELSE**:
-   ```
-   sudo docker build -t cs2-arm64 -f Dockerfile.generic .
-   ```
+    container_name: 'cs2-server'
+    ports:
+      - '27015:27015/udp'
+      - '27015:27015/tcp'
+    restart: 'unless-stopped'
+    # change if you don't want cs2 hogging compute
+    ulimits:
+      nice:
+        soft: -20
+        hard: -20
+    environment:
+      STEAM_GAMESERVER_API: ${STEAM_GAMESERVER_API:-}
+      STARTUP_MAP: ${STARTUP_MAP:-de_dust2}
 
-4. **Run the Docker Image**:
-   Before you run the docker image, do this: `sudo chmod +x init-server.sh`
-   To run the docker image, run the command:
-   ```
-   sudo docker compose up -d
-   ```
-   If you want to follow the logs after it is running, run the command:
-   ```
-   sudo docker compose logs -f
-   ```
+      CPU_CORE_COUNT: ${CPU_CORE_COUNT:-3}
+      SERVER_NICENESS: ${SERVER_NICENESS:-0}
+      PUID: ${PUID:-1001}
+      PGID: ${PGID:-1001}
 
-6. **Port Access and Forwarding**:  
-   On your router (or Oracle Cloud Security List), open the ports 27015 TCP and UDP. 27015 is the default port for Counter-Strike 2 servers.  
+      ALWAYS_UPDATE_ON_START: ${ALWAYS_UPDATE_ON_START:-true}
+      ENABLE_MODDING: ${ENABLE_MODDING:-false}
+      # CHANGE DOTNET TO 0 IF USING MODDING
+      DOTNET_EnableWriteXorExecute: 1
+      MMS_URL: ${MMS_URL:-}
+      CSS_URL: ${CSS_URL:-}
+
+      EXTRA_PARAMS: >
+        -nojoy
+        -nohltv
+        +engine_no_focus_sleep 0
+        +fps_max 64
+        +sv_hibernate_when_empty 0
+    volumes:
+      - './cs2-data:/cs2-data'
+      - './fex-data:/home/steam/.fex-emu'
+    stdin_open: true
+    tty: true
+    entrypoint: /home/steam/init-server.sh
+```
+
+3. **Port Access and Forwarding**:  
+   On your router (or Oracle Cloud Security List), open the port 27015 TCP/UDP (or respective to your other port choosing). They are the default ports for a CS2 server.
 
    DOCKER WILL BYPASS UFW, so you will not need for any firewall rules.
 
