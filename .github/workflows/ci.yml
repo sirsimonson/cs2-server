@@ -2,9 +2,19 @@ name: Counter-Strike 2 ARM64 CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: 
+      - main
+    paths-ignore:
+      - README.md
+      - LICENSE
+      - .gitignore
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+    paths-ignore:
+      - README.md
+      - LICENSE
+      - .gitignore
 
 jobs:
   shellcheck:
