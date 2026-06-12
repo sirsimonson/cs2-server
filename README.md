@@ -57,13 +57,14 @@ services:
     tty: true
     entrypoint: /home/steam/init-server.sh
 ```
+and then run `sudo docker compose up -d --build`. Docker will build, and then run the server.
 
 3. **Port Access and Forwarding**:  
    On your router (or Oracle Cloud Security List), open the port 27015 TCP/UDP (or respective to your other port choosing). They are the default ports for a CS2 server.
 
    DOCKER WILL BYPASS UFW, so you will not need for any firewall rules.
 
-Once you finish step 5, congrats! The server is now ready to be used. 
+Once you finish step 3, congrats! The server is now ready to be used. 
 
 # Modifying Docker Compose Config
 - If you want to change the port to some other port, you can add -port \<port> to the EXTRA_PARAMS and change the Docker Compose ports as well.
