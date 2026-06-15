@@ -6,13 +6,6 @@ services:
       # change to "Dockerfile.generic" if you are not using Oracle Ampere
     container_name: cs2-server
 
-    # Ressourcen-Limits direkt in der Compose (Single Source of Truth)
-    deploy:
-      resources:
-        limits:
-          cpus: '3.5'
-          memory: 20G
-    
     # Host networking avoids NAT overhead that causes subtick desync
     network_mode: host
     restart: 'unless-stopped'
@@ -23,7 +16,11 @@ services:
         
     environment:
       - STEAM_GAMESERVER_API=${STEAM_TOKEN:?}
-      - EXTRA_PARAMS=${EXTRA_PARAMS}
+      - EXTRA_PARAMS=> -nojoy
+  -nohltv
+  +engine_no_focus_sleep 0
+  +fps_max 64
+  +sv_hibernate_when_empty 0
       - ALWAYS_UPDATE_ON_START=${ALWAYS_UPDATE_ON_START:-true}
       - INSTALL_MODDING=${INSTALL_MODDING:-false}
       - DOTNET_EnableWriteXorExecute=1
