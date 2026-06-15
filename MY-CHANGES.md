@@ -20,7 +20,7 @@
 
 ### Environment Variables
 - **Upstream**: `STEAM_GAMESERVER_API`, `STARTUP_MAP`, `MMS_URL`, `CSS_URL`
-- **Mine**: `STEAM_TOKEN` (Coolify variable name), `EXTRA_PARAMS`, `INSTALL_MODDING`, `CPU_CORE_COUNT`, `TZ`
+- **Mine**: `STEAM_TOKEN` (Coolify variable name), `INSTALL_MODDING`, `CPU_CORE_COUNT`, `TZ` (same EXTRA_PARAMS as upstream now)
 
 ## init-server.sh
 
