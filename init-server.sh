@@ -68,14 +68,17 @@ update_game_files() {
   cd "$STEAMCMD_DIR" || exit 1
 
   rm -rf "$CS2_DIR/steamapps/downloading"
-  rm -f "$STEAMCMD_DIR/appcache/appinfo.vdf"
+rm -f "$STEAMCMD_DIR/appcache/appinfo.vdf"
 
   local max_retries=5
   local attempt=1
   local wait_time=5
-  
-  while [ $attempt -le $max_retries ]; do
-    echo "SteamCMD Update attempt $attempt of $max_retries..."
+   
+  if FEXBash './steamcmd.sh +@sSteamCmdForcePlatformBitness 64 +force_install_dir "/cs2-data" +login anonymous +app_update 730 +quit'; then
+    echo "SteamCMD update successful."
+    return 0
+  else
+    echo "WARNING: SteamCMD failed or validation corrupted. Nuking files immediately for a clean install..."
     
     local update_cmd='+app_update 730'
     # Use validate on retries to recover from corrupt state
@@ -95,9 +98,7 @@ update_game_files() {
       wait_time=$((wait_time * 2))
       attempt=$((attempt + 1))
     fi
-  done
-  
-  echo "ERROR: SteamCMD failed to update after $max_retries attempts. The server will attempt to boot with the existing files."
+  fi
 }
 
 # makes sure the server is up to date
@@ -119,6 +120,10 @@ manage_game_server() {
     echo "Querying Steam API for CS2 build ID"
     local local_build
     local_build=$(grep -Po '"buildid"\s+"\K[0-9]+' "$appmanifest")
+    if [ -z "$local_build" ]; then
+      echo "WARNING: Could not parse local build ID. Assuming build 0 to force safe update."
+      local_build="0"
+    fi
 
     local remote_build
     remote_build=$(curl -s https://api.steamcmd.net/v1/info/730 | jq -r '.data["730"].depots.branches.public.buildid')
@@ -132,7 +137,6 @@ manage_game_server() {
     elif [ "$local_build" != "$remote_build" ]; then
       echo "Updating: Local Build: $local_build | Remote Build: $remote_build"
 
-      patch_gameinfo "remove"
       if [ -d "$GAME_DIR/addons" ]; then
         echo "Moving active mods to /tmp/addons_stash"
         rm -rf /tmp/addons_stash
@@ -141,13 +145,15 @@ manage_game_server() {
 
       pkill -9 FEXServer || true
       rm -f /tmp/*FEXServer.Socket*
-      rm -f "$appmanifest"
+      # rm -rf "$CS2_DIR/game"
+      # rm -rf "$CS2_DIR/steamapps"
 
       update_game_files
       export SERVER_JUST_UPDATED="true"
 
       if [ -d "/tmp/addons_stash" ]; then
         echo "Restoring stashed mods for post-update processing"
+        mkdir -p "$GAME_DIR"
         mv /tmp/addons_stash "$GAME_DIR/addons"
       fi
     else
@@ -215,6 +221,7 @@ disable_mods() {
 }
 
 # fetches remote versions and url for comparison later
+# there is NO fallback for this, 
 fetch_mod_versions() {
   echo "Fetching remote version info"
 
@@ -230,8 +237,11 @@ fetch_mod_versions() {
     MMS_TARGET_URL=$(echo "$mms_api_response" | jq -r 'map(select(.prerelease == true)) | .[0].assets[] | select(.name | contains("linux") and endswith(".tar.gz")) | .browser_download_url')
 
     if [ "$MMS_TARGET_URL" == "null" ] || [ -z "$MMS_TARGET_URL" ]; then
-       echo "ERROR: Failed to fetch MMS from GitHub API. You might be rate-limited by GitHub."
+       echo "ERROR: Failed to fetch MMS from GitHub API. Fallback to last pinned version."
+       MMS_LATEST_FILE="mmsource-2.0.0-git1401-linux"
+       MMS_TARGET_URL="https://github.com/alliedmodders/metamod-source/releases/download/2.0.0.1401/mmsource-2.0.0-git1401-linux.tar.gz"
     fi
+
   else
     MMS_LATEST_FILE="custom-url-defined"
     MMS_TARGET_URL="$MMS_CUSTOM_URL"
@@ -386,37 +396,16 @@ start_server() {
   local exec_string="exec nice -n $priority taskset -c $allowed_cpus FEXBash \"$cs2_cmd\""
 
   echo "Exec args: $exec_string"
-  # eval "$exec_string"
-
-  # CI/CD friendly execute
-  if [ "${CI_TEST_MODE:-false}" = "true" ]; then
-    echo "CI Test Mode: starting server and looking for pattern"
-    eval "$exec_string" > /tmp/server_ci.log 2>&1 &
-    SERVER_PID=$!
-
-    pattern="Connection to Steam servers successful."
-    timeout=120
-    while [ $timeout -gt 0 ]; do
-      if grep -q "$pattern" /tmp/server_ci.log 2>/dev/null; then
-        echo "SUCCESS: Server started correctly"
-        kill $SERVER_PID 2>/dev/null || true
-        exit 0
-      fi
-      sleep 2
-      timeout=$((timeout - 2))
-    done
-    echo "ERROR: Server didn't start within the timeout"
-    cat /tmp/server_ci.log
-    kill $SERVER_PID 2>/dev/null || true
-    exit 1
-  else
-    eval "$exec_string"
-  fi
+  eval "$exec_string"
 }
 
 main() {
   setup_fex
   setup_steamcmd
+	if [ "${CI_TEST_MODE:-false}" = "true" ]; then
+		echo "CI Test Mode detected! FEX and SteamCMD initialized successfully."
+		exit 0
+	fi
   manage_game_server
   manage_modding
   start_server

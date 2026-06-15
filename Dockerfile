@@ -20,7 +20,7 @@ RUN mkdir Build && cd Build && \
 FROM debian:bookworm-slim
 SHELL ["/bin/bash", "-c"]
 
-RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y curl python3 sudo locales unzip libsdl2-2.0-0 libepoxy0 libssl3 libstdc++6 squashfs-tools squashfuse libqt5widgets5 libqt5qml5 gosu jq && rm -rf /var/lib/apt/lists/*
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y curl python3 sudo locales unzip libsdl2-2.0-0 libepoxy0 libssl3 libstdc++6 squashfs-tools squashfuse gosu jq procps && rm -rf /var/lib/apt/lists/*
 
 RUN echo "de_DE.UTF-8 UTF-8" > /etc/locale.gen && \
     locale-gen de_DE.UTF-8
@@ -31,6 +31,8 @@ ENV TZ=Europe/Berlin
 RUN ln -snf /usr/share/zoneinfo/Europe/Berlin /etc/localtime && echo Europe/Berlin > /etc/timezone
 
 COPY --from=builder /usr/bin/FEX* /usr/bin/
+COPY --from=builder /usr/lib/aarch64-linux-gnu/libFEXCore* /usr/lib/aarch64-linux-gnu/
+COPY --from=builder /usr/share/fex-emu /usr/share/fex-emu
 
 RUN useradd -m steam
 
@@ -46,5 +48,8 @@ USER steam
 WORKDIR /home/steam/Steam
 RUN curl -sqL "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" | tar zxvf - && chown -R steam:steam /home/steam
 
+COPY init-server.sh /home/steam/init-server.sh
+RUN chmod +x /home/steam/init-server.sh
+
 WORKDIR /home/steam
-ENTRYPOINT ["/bin/bash"]
+ENTRYPOINT ["/home/steam/init-server.sh"]

@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      # change to "Dockerfile.generic" if you are not using Oracle Ampere
     container_name: cs2-server
 
     # Ressourcen-Limits direkt in der Compose (Single Source of Truth)
@@ -32,7 +33,6 @@ services:
     volumes:
       - cs2-data:/cs2-data
       - fex-data:/home/steam/.fex-emu
-      
     stdin_open: true
     tty: true
     entrypoint: /home/steam/init-server.sh
