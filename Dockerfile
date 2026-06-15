@@ -1,18 +1,9 @@
 #builder for the image
-FROM debian:bookworm AS builder
+FROM debian:bookworm-slim AS builder
 SHELL ["/bin/bash", "-c"]
 
-ARG STARTUP_MAP
-ARG ALWAYS_UPDATE_ON_START
-ARG INSTALL_MODDING
-ARG CPU_CORE_COUNT
-ARG EXTRA_PARAMS
-ARG STEAM_TOKEN
-ARG PUID
-ARG PGID
-ARG STEAM_GAMESERVER_API
-
-RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends git curl python3 sudo cmake ninja-build pkg-config clang llvm lld nasm libsdl2-dev libepoxy-dev libssl-dev python3-dev libstdc++-12-dev squashfs-tools squashfuse
+RUN echo 'Acquire::Retries 5;' > /etc/apt/apt.conf.d/99-retry && \
+    apt update && DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends git curl python3 sudo cmake ninja-build pkg-config clang llvm lld nasm libsdl2-dev libepoxy-dev libssl-dev python3-dev libstdc++-12-dev squashfs-tools squashfuse
 
 WORKDIR /tmp
 # pinned to 2605 for stability
@@ -30,17 +21,8 @@ RUN mkdir Build && cd Build && \
 FROM debian:bookworm-slim
 SHELL ["/bin/bash", "-c"]
 
-ARG STARTUP_MAP
-ARG ALWAYS_UPDATE_ON_START
-ARG INSTALL_MODDING
-ARG CPU_CORE_COUNT
-ARG EXTRA_PARAMS
-ARG STEAM_TOKEN
-ARG PUID
-ARG PGID
-ARG STEAM_GAMESERVER_API
-
-RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends curl python3 sudo locales unzip libsdl2-2.0-0 libepoxy0 libssl3 libstdc++6 squashfs-tools squashfuse gosu jq procps && rm -rf /var/lib/apt/lists/*
+RUN echo 'Acquire::Retries 5;' > /etc/apt/apt.conf.d/99-retry && \
+    apt update && DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends curl python3 sudo locales unzip libsdl2-2.0-0 libepoxy0 libssl3 libstdc++6 squashfs-tools squashfuse gosu jq procps && rm -rf /var/lib/apt/lists/*
 
 RUN echo "de_DE.UTF-8 UTF-8" > /etc/locale.gen && \
     locale-gen de_DE.UTF-8
