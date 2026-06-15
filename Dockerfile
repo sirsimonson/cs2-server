@@ -48,8 +48,5 @@ USER steam
 WORKDIR /home/steam/Steam
 RUN curl -sqL "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" | tar zxvf - && chown -R steam:steam /home/steam
 
-COPY init-server.sh /home/steam/init-server.sh
-RUN chmod +x /home/steam/init-server.sh
-
 WORKDIR /home/steam
 ENTRYPOINT ["/home/steam/init-server.sh"]
