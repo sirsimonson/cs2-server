@@ -16,16 +16,19 @@ services:
         
     environment:
       - STEAM_GAMESERVER_API=${STEAM_TOKEN:?}
+      - STARTUP_MAP=${STARTUP_MAP:-de_dust2}
+      - ALWAYS_UPDATE_ON_START=true
+      - ENABLE_MODDING=false
+      - DOTNET_EnableWriteXorExecute=1
+      - CPU_CORE_COUNT=3
+      - SERVER_NICENESS=0
+      - PUID=1001
+      - PGID=1001
       - EXTRA_PARAMS=> -nojoy
   -nohltv
   +engine_no_focus_sleep 0
   +fps_max 64
   +sv_hibernate_when_empty 0
-      - ALWAYS_UPDATE_ON_START=${ALWAYS_UPDATE_ON_START:-true}
-      - INSTALL_MODDING=${INSTALL_MODDING:-false}
-      - DOTNET_EnableWriteXorExecute=1
-      - CPU_CORE_COUNT=${CPU_CORE_COUNT:?3}
-      - TZ=Europe/Berlin
       
     volumes:
       - cs2-data:/cs2-data

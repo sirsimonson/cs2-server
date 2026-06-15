@@ -19,8 +19,11 @@
 - **Mine**: Named volumes (`cs2-data`, `fex-data`) - managed by Docker, better for Coolify
 
 ### Environment Variables
-- **Upstream**: `STEAM_GAMESERVER_API`, `STARTUP_MAP`, `MMS_URL`, `CSS_URL`
-- **Mine**: `STEAM_TOKEN` (Coolify variable name), `INSTALL_MODDING`, `CPU_CORE_COUNT`, `TZ` (same EXTRA_PARAMS as upstream now)
+- **Upstream**: Fully configurable via env vars
+- **Mine**: Fixed defaults for Coolify one-click deployment
+  - `STEAM_TOKEN` (required - only env var needed)
+  - `STARTUP_MAP` (default: `de_dust2`)
+  - All other values hardcoded: `CPU_CORE_COUNT=3`, `SERVER_NICENESS=0`, `PUID=1001`, `PGID=1001`, `ALWAYS_UPDATE_ON_START=true`, `ENABLE_MODDING=false`, fixed `EXTRA_PARAMS`
 
 ## init-server.sh
 
